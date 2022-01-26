@@ -1,0 +1,81 @@
+<canvas id="canvas" width="640" height="480" style="border: 1px solid #505050"></canvas>
+<script>
+    var canvas = document.getElementById("canvas");
+    var context = canvas.getContext("2d");
+
+    // global variables
+    var fps = 30;
+    var width = canvas.width;
+    var height = canvas.height;
+    var backColor = "#000000";
+    var foreColor = "#505050";
+    var playerColor = "#ffd700";
+
+
+    class Figure {
+        constructor(form) {
+            this.form = form;
+            this.x = 0;
+            this.y = 0;
+            this.rotation = 0;
+        }
+
+        rotatedPoint(point) {
+            let cos = Math.cos;
+            let sin = Math.sin;
+            let x = cos(this.rotation)*point[0] - sin(this.rotation)*point[1];
+            let y = sin(this.rotation)*point[0] + cos(this.rotation)*point[1];
+            return [x, y];
+        }
+
+        draw() {
+            let self = this;
+            let points = this.form.map(point => {return self.rotatedPoint(point);})
+            context.strokeStyle = playerColor;
+            context.lineWidth = 1;
+
+            context.beginPath();
+            context.moveTo(this.x+points[0][0], this.y+points[0][1]);
+            for (const point of points) {
+                context.lineTo(this.x+point[0], this.y+point[1])
+            }
+            context.lineTo(this.x+points[0][0], this.y+points[0][1]);
+            context.stroke();
+        }
+
+    }
+
+    class Game {
+        constructor() {
+            this.player = new Figure([[-20, -20], [20, 20], [-20, 20], [20, -20]])
+            this.player.x = 100;
+            this.player.y = 100;
+        }
+
+        clear() {
+            context.fillStyle = backColor;
+            context.fillRect(0, 0, width, height);
+        }
+
+        cycle() {
+            this.clear();
+            if (this.player.x > width) {
+                this.player.x = 1;
+            }
+            if (this.player.rotation > 3.14) {
+                this.player.rotation = 0;
+            }
+            this.player.x += 1;
+            this.player.rotation += 0.01;
+            this.player.draw();
+        }
+    }
+
+
+    function main() {
+        let game = new Game();
+        setInterval(() => {game.cycle();}, 1000/fps);
+    }
+
+    main();
+</script>
