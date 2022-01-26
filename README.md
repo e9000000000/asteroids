@@ -1,2 +1,1 @@
-# asteroids
-asteroids game in js
+# pvp in space
