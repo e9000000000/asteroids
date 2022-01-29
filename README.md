@@ -2,8 +2,6 @@
 
 ## how to run
 ```bash
-pip install poetry
-poetry install
-poetry run ./server.py
+docker-compose up
 ```
-started on `localhost:1215`
+started on `0.0.0.0:1215`

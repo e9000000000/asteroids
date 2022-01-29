@@ -1,0 +1,11 @@
+version: '3.4'
+
+services:
+  space_pvp:
+    container_name: space_pvp
+    build:
+      context: .
+    volumes:
+      - .:/service
+    ports:
+      - 1215:1215
