@@ -103,6 +103,11 @@ class Figure {
         }
     }
 
+    add_forward_speed(amount) {
+        let rotation = this.rotation - Math.PI/2;
+        this.vx += Math.cos(rotation)*amount;
+        this.vy += Math.sin(rotation)*amount;
+    }
 }
 
 
@@ -110,8 +115,26 @@ class Enemy extends Figure {
     constructor() {
         super([[0, -4], [-2, 4], [0, 2], [2, 4]]);
         this.max_v = 6;
+        this.bullets = [];
     }
 
+}
+
+
+class Bullet extends Figure {
+    constructor(x, y, rotation) {
+        super([[-0.5, -1], [0.5, -1], [0.5, 1], [-0.5, 1]]);
+        this.max_v = 2;
+        this.rotation = rotation;
+        this.x = x;
+        this.y = y;
+        this.add_forward_speed(this.max_v);
+        this.is_alive = true;
+    }
+
+    death() {
+        this.is_alive = false;
+    }
 }
 
 
@@ -126,12 +149,6 @@ class Player extends Figure {
         this.color = playerColor;
     }
 
-    add_forward_speed(amount) {
-        let rotation = this.rotation - Math.PI/2;
-        this.vx += Math.cos(rotation)*amount;
-        this.vy += Math.sin(rotation)*amount;
-    }
-
     death() {
         this.is_alive = false;
     }
@@ -141,6 +158,7 @@ class Player extends Figure {
 class Game {
     constructor() {
         this.player = new Player();
+        this.bullets = [];
         this.enemies = [];
         this.conditions = {
             "forward": false,
@@ -161,7 +179,12 @@ class Game {
             enemy.y = data.y;
             enemy.vy = data.vy;
             enemy.rotation = data.rotation;
-            this.enemies.push(enemy)
+            enemy.bullets = [];
+            for (var bdata of data.bullets) {
+                console.log(bdata);
+                enemy.bullets.push(new Bullet(bdata.x, bdata.y, bdata.rotation));
+            }
+            this.enemies.push(enemy);
         }
     }
 
@@ -199,9 +222,7 @@ class Game {
             this.conditions.right = false;
         }
         if (e.code == "Space") {
-            if (this.conditions.shoot_released) {
-                this.conditions.shoot_released = true;
-            }
+            this.conditions.shoot_released = true;
         }
     }
 
@@ -210,16 +231,24 @@ class Game {
         for (var enemy of this.enemies) {
             enemy.update();
             enemy.draw();
+            for (var bullet of enemy.bullets) {
+                bullet.update();
+                bullet.draw();
+            }
         }
 
         if (this.conditions.left) {
-            this.player.rotate(-0.2)
+            this.player.rotate(-0.15)
         }
         if (this.conditions.right) {
-            this.player.rotate(0.2)
+            this.player.rotate(0.15)
         }
         if (this.conditions.forward) {
             this.player.add_forward_speed(0.1);
+        }
+        if (this.conditions.shoot_pressed) {
+            this.conditions.shoot_pressed = false;
+            this.bullets.push(new Bullet(this.player.x, this.player.y, this.player.rotation))
         }
         if (!this.player.is_alive) {
             this.player = new Player();
@@ -231,7 +260,18 @@ class Game {
             "y": this.player.y,
             "vx": this.player.vx,
             "vy": this.player.vy,
-            "rotation": this.player.rotation
+            "rotation": this.player.rotation,
+            "bullets": []
+        }
+        this.bullets = this.bullets.filter(b => b.is_alive)
+        for (var bullet of this.bullets) {
+            bullet.update();
+            bullet.draw();
+            player_data.bullets.push({
+                "x": bullet.x,
+                "y": bullet.y,
+                "rotation": bullet.rotation
+            });
         }
         ws.send(JSON.stringify(player_data));
     }
