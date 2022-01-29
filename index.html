@@ -108,6 +108,14 @@ class Figure {
         this.vx += Math.cos(rotation)*amount;
         this.vy += Math.sin(rotation)*amount;
     }
+
+    is_collide(other) {
+        var x = this.x;
+        var y = this.y;
+        var ox = other.x;
+        var oy = other.y;
+        return x-2 < ox && x+2 > ox && y-2 < oy && y+2 > oy
+    }
 }
 
 
@@ -181,7 +189,6 @@ class Game {
             enemy.rotation = data.rotation;
             enemy.bullets = [];
             for (var bdata of data.bullets) {
-                console.log(bdata);
                 enemy.bullets.push(new Bullet(bdata.x, bdata.y, bdata.rotation));
             }
             this.enemies.push(enemy);
@@ -232,6 +239,9 @@ class Game {
             enemy.update();
             enemy.draw();
             for (var bullet of enemy.bullets) {
+                if (this.player.is_collide(bullet)) {
+                    this.player.death();
+                }
                 bullet.update();
                 bullet.draw();
             }
