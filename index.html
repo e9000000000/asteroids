@@ -2,6 +2,7 @@
 <script>
 var canvas = document.getElementById("canvas");
 var context = canvas.getContext("2d");
+var ws = new WebSocket("ws://"+location.host+"/ws")
 
 // global variables
 var fps = 30;
@@ -31,6 +32,7 @@ class Figure {
         this.vx = 0;
         this.vy = 0;
         this.rotation = 0;  // radians
+        this.color = foreColor;
     }
 
     adaptSize(a, is_height) {
@@ -55,7 +57,7 @@ class Figure {
         let x = this.adaptSize(this.x, false);
         let y = this.adaptSize(this.y, true)
         let points = this.form.map(point => {return self.calculatedPoint(point);})
-        context.strokeStyle = playerColor;
+        context.strokeStyle = this.color;
         context.lineWidth = 1;
 
         context.beginPath();
@@ -67,22 +69,8 @@ class Figure {
         context.stroke();
     }
 
-}
-
-
-class Player extends Figure {
-    constructor() {
-        super([[0, -4], [-2, 4], [0, 2], [2, 4]]);
-        this.x = randomInt(right+1);
-        this.y = randomInt(bottom+1);
-        this.rotation = Math.random() * Math.PI;
-        this.max_v = 6;
-    }
-
-    add_forward_speed(amount) {
-        let rotation = this.rotation - Math.PI/2;
-        this.vx += Math.cos(rotation)*amount;
-        this.vy += Math.sin(rotation)*amount;
+    death() {
+        console.log("death");
     }
 
     update() {
@@ -105,8 +93,47 @@ class Player extends Figure {
         }
     }
 
+    rotate(amount) {
+        this.rotation += amount;
+        if (this.rotation > Math.PI*2) {
+            this.rotation -= Math.PI*2;
+        }
+        if (this.rotation < -Math.PI*2) {
+            this.rotation += Math.PI*2;
+        }
+    }
+
+}
+
+
+class Enemy extends Figure {
+    constructor() {
+        super([[0, -4], [-2, 4], [0, 2], [2, 4]]);
+        this.max_v = 6;
+    }
+
+}
+
+
+class Player extends Figure {
+    constructor() {
+        super([[0, -4], [-2, 4], [0, 2], [2, 4]]);
+        this.x = randomInt(right+1);
+        this.y = randomInt(bottom+1);
+        this.rotation = Math.random() * Math.PI;
+        this.max_v = 6;
+        this.is_alive = true;
+        this.color = playerColor;
+    }
+
+    add_forward_speed(amount) {
+        let rotation = this.rotation - Math.PI/2;
+        this.vx += Math.cos(rotation)*amount;
+        this.vy += Math.sin(rotation)*amount;
+    }
+
     death() {
-        console.log("die");
+        this.is_alive = false;
     }
 }
 
@@ -121,6 +148,20 @@ class Game {
             "right": false,
             "shoot_pressed": false,
             "shoot_released": true,
+        }
+    }
+
+    update(e) {
+        var datalist = JSON.parse(e.data);
+        this.enemies = [];
+        for (const data of datalist) {
+            var enemy = new Enemy();
+            enemy.x = data.x;
+            enemy.vx = data.vx;
+            enemy.y = data.y;
+            enemy.vy = data.vy;
+            enemy.rotation = data.rotation;
+            this.enemies.push(enemy)
         }
     }
 
@@ -166,31 +207,43 @@ class Game {
 
     cycle() {
         this.clear();
-        for (const enemy of this.enemies) {
+        for (var enemy of this.enemies) {
             enemy.update();
             enemy.draw();
         }
 
         if (this.conditions.left) {
-            this.player.rotation -= 0.1;
+            this.player.rotate(-0.2)
         }
         if (this.conditions.right) {
-            this.player.rotation += 0.1;
+            this.player.rotate(0.2)
         }
         if (this.conditions.forward) {
             this.player.add_forward_speed(0.1);
         }
+        if (!this.player.is_alive) {
+            this.player = new Player();
+        }
         this.player.update();
         this.player.draw();
+        let player_data = {
+            "x": this.player.x,
+            "y": this.player.y,
+            "vx": this.player.vx,
+            "vy": this.player.vy,
+            "rotation": this.player.rotation
+        }
+        ws.send(JSON.stringify(player_data));
     }
 }
 
 
 function main() {
     let game = new Game();
-    setInterval(() => {game.cycle();}, 1000/fps);
     document.addEventListener("keydown", e => {game.keydown_handler(e);})
     document.addEventListener("keyup", e => {game.keyup_handler(e);})
+    ws.onmessage = e => {game.update(e);}
+    ws.onopen = () => {setInterval(() => {game.cycle();}, 1000/fps);}
 }
 
 main();
