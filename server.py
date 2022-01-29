@@ -8,7 +8,7 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 
-TICK_RATE = 24
+TICK_RATE = 30
 AFK_TIME = 4
 
 app = FastAPI()
